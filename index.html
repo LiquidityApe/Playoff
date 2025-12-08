@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verse Portfolio Playoff</title>
+
+    <link rel="icon" href="img/icon.png" type="image/png">
+    <link rel="apple-touch-icon" href="img/icon.png">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #0a0e17;
+            --card: rgba(20, 25, 40, 0.6);
+            --glass: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --primary: #00d4ff;
+            --purple: #8b5cf6;
+            --pink: #ec4899;
+            --green: #10b981;
+            --orange: #f59e0b;
+            --red: #ff006e;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .container { max-width: 1100px; margin: 0 auto; backdrop-filter: blur(16px); padding-bottom: 100px; }
+        header { text-align: center; margin-bottom: 40px; padding: 20px; }
+        h1 {
+            font-size: 4rem;
+            background: linear-gradient(90deg, #00d4ff, #8b5cf6, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+            letter-spacing: -2px;
+            text-shadow: 0 0 40px rgba(0, 212, 255, 0.5);
+        }
+        .balance-card {
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        .balance-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(0,212,255,0.1), rgba(139,92,246,0.1));
+            pointer-events: none;
+        }
+        .total-balance {
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #00ff88, #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 10px 0;
+        }
+        .available { color: var(--text-muted); font-size: 1.1rem; }
+        .available.over { color: var(--red); font-weight: bold; }
+        .wallet-info { 
+            margin-top: 20px; 
+            font-size: 1.1rem; 
+            color: var(--text-muted); 
+        }
+        .wallet-info span { 
+            color: var(--text); 
+            font-weight: 600; 
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.5px;
+        }
+        .tokens-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        .token-card {
+            background: var(--glass);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 24px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+        .token-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 4px;
+            background: var(--gradient);
+            transform: scaleX(0);
+            transition: transform 0.4s;
+        }
+        .token-card:hover {
+            transform: translateY(-12px);
+            box-shadow: 0 25px 50px rgba(0, 212, 255, 0.2);
+            border-color: var(--primary);
+        }
+        .token-card:hover::before { transform: scaleX(1); }
+        .token-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .token-name { font-size: 1.5rem; font-weight: 600; }
+        .token-icon {
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            background: var(--gradient);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; font-weight: bold; color: white;
+        }
+        input {
+            width: 100%; padding: 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: white; font-size: 1.1rem; margin: 12px 0;
+            transition: all 0.3s;
+            text-align: right;
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0,212,255,0.2);
+        }
+        input.cap-reached {
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px rgba(255,0,110,0.2);
+        }
+        .allocation { font-size: 0.95rem; color: var(--text-muted); }
+        .chart-container {
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 30px;
+            margin-bottom: 30px;
+            height: 400px;
+        }
+        .buttons { display: flex; gap: 20px; }
+        button {
+            flex: 1; padding: 18px;
+            background: linear-gradient(90deg, #00d4ff, #8b5cf6);
+            border: none; border-radius: 16px;
+            color: white; font-size: 1.3rem; font-weight: 600;
+            cursor: pointer; transition: all 0.4s;
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+            position: relative; overflow: hidden;
+        }
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 40px rgba(0, 212, 255, 0.4);
+        }
+        #reset-btn {
+            background: linear-gradient(90deg, #ff006e, #ec4899);
+            box-shadow: 0 10px 30px rgba(255, 0, 110, 0.3);
+        }
+        #allocate-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        #allocate-btn:disabled:hover {
+            transform: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        .message {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        .live-warning {
+            text-align: center;
+            margin: 20px 0;
+            padding: 12px;
+            background: rgba(255,0,110,0.15);
+            border: 1px solid var(--red);
+            border-radius: 12px;
+            color: var(--red);
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+        .live-warning.show { opacity: 1; }
+
+        .footer-credit {
+            text-align: center;
+            margin-top: 60px;
+            padding: 20px;
+            font-size: 0.9rem;
+            color: #64748b;
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+        .footer-credit:hover { opacity: 1; color: #94a3b8; }
+        .footer-credit a { color: #00d4ff; text-decoration: none; font-weight: 600; }
+        .footer-credit a:hover { text-decoration: underline; }
+
+        #back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #00d4ff, #8b5cf6);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.8rem;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.4);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.4s ease;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #back-to-top.show { opacity: 1; visibility: visible; }
+        #back-to-top:hover { transform: translateY(-8px) scale(1.1); box-shadow: 0 20px 40px rgba(0, 212, 255, 0.6); }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+        }
+        .modal-content h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            background: linear-gradient(90deg, #00d4ff, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .input-group { margin: 15px 0; }
+        .input-group input {
+            width: 100%;
+            padding: 16px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        .btc { --gradient: linear-gradient(90deg, #f7931a, #f0b90b); }
+        .eth { --gradient: linear-gradient(90deg, #858688, #3B3B3B); }
+        .sol { --gradient: linear-gradient(90deg, #5CA8CA, #976CE5); }
+        .verse { --gradient: linear-gradient(90deg, #BB13E4, #8A37EA); }
+        .avax { --gradient: linear-gradient(90deg, #E03E3F, #E03E3F); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Portfolio Playoff</h1>
+        </header>
+
+        <div class="balance-card">
+            <div class="available"><b>Total Portfolio Value</b></div>
+            <div class="total-balance">$<span id="total-balance">100,000.00</span></div>
+            <div class="available" id="available-text"><b>Available to allocate:</b> $<span id="available-balance">100,000.00</span></div>
+            <div class="wallet-info"><b>Connected Wallet:</b> <span id="wallet-address">Not connected</span></div>
+        </div>
+
+        <div class="live-warning" id="live-warning">
+            Over allocation! Reduce your amounts.
+        </div>
+
+        <div class="tokens-grid">
+            <div class="token-card verse">
+                <div class="token-header">
+                    <div class="token-name">Verse</div>
+                    <div class="token-icon">V</div>
+                </div>
+                <input type="text" id="verse-amount" class="formatted-input" placeholder="0" data-raw="0">
+                <div class="allocation">Allocated: $<span id="verse-alloc">0.00</span> (<span id="verse-percent">0</span>%)</div>
+            </div>
+
+            <div class="token-card btc">
+                <div class="token-header">
+                    <div class="token-name">Bitcoin</div>
+                    <div class="token-icon">B</div>
+                </div>
+                <input type="text" id="btc-amount" class="formatted-input" placeholder="0" data-raw="0">
+                <div class="allocation">Allocated: $<span id="btc-alloc">0.00</span> (<span id="btc-percent">0</span>%)</div>
+            </div>
+
+            <div class="token-card eth">
+                <div class="token-header">
+                    <div class="token-name">Ethereum</div>
+                    <div class="token-icon">E</div>
+                </div>
+                <input type="text" id="eth-amount" class="formatted-input" placeholder="0" data-raw="0">
+                <div class="allocation">Allocated: $<span id="eth-alloc">0.00</span> (<span id="eth-percent">0</span>%)</div>
+            </div>
+
+            <div class="token-card sol">
+                <div class="token-header">
+                    <div class="token-name">Solana</div>
+                    <div class="token-icon">S</div>
+                </div>
+                <input type="text" id="sol-amount" class="formatted-input" placeholder="0" data-raw="0">
+                <div class="allocation">Allocated: $<span id="sol-alloc">0.00</span> (<span id="sol-percent">0</span>%)</div>
+            </div>
+
+            <div class="token-card avax">
+                <div class="token-header">
+                    <div class="token-name">Avalanche</div>
+                    <div class="token-icon">A</div>
+                </div>
+                <input type="text" id="avax-amount" class="formatted-input" placeholder="0" data-raw="0">
+                <div class="allocation">Allocated: $<span id="avax-alloc">0.00</span> (<span id="avax-percent">0</span>%)</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="portfolioChart"></canvas>
+        </div>
+
+        <div class="buttons">
+            <button id="allocate-btn">Allocate Funds Now</button>
+            <button id="reset-btn">Disconnect wallet</button>
+        </div>
+        <div class="message" id="message"></div>
+
+        <div class="footer-credit">
+            Powered by <a href="https://snappquest.niti.com.ng/" target="_blank">SnappQuest</a>
+        </div>
+    </div>
+
+    <button id="back-to-top" title="Back to Top"><i class="fas fa-arrow-up"></i></button>
+
+    <!-- ENHANCED MODAL -->
+    <div id="wallet-modal" class="modal">
+        <div class="modal-content">
+            <h2>Connect Your Info</h2>
+            <div class="input-group">
+                <input id="telegram-input" type="text" placeholder="Telegram @yourusername" />
+            </div>
+            <div class="input-group">
+                <input id="wallet-input" type="text" placeholder="0x... (Polygon Address)" />
+            </div>
+            <button id="submit-wallet" style="margin-top:20px; padding:16px 40px; background:#feca57; color:#333; border:none; border-radius:50px; font-weight:bold; cursor:pointer;">Connect</button>
+        </div>
+    </div>
+
+    <script>
+        const totalBalance = 100000;
+        const MAX_PER_FIELD = 100000;
+        let allocations = { verse: 0, btc: 0, eth: 0, sol: 0, avax: 0 };
+        let chart;
+        let walletAddress = null;
+        let telegramHandle = null;
+        const allocateBtn = document.getElementById('allocate-btn');
+
+        const colors = {
+            verse: '#BB13E4', btc: '#f7931a', eth: '#3F3F3F', sol: '#976CE5',
+            avax: '#E03E3F', available: '#334155'
+        };
+
+        function truncateAddress(addr) {
+            if (!addr || addr.length < 11) return "Not connected";
+            return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+        }
+
+        function updateWalletDisplay() {
+            const displayEl = document.getElementById('wallet-address');
+            if (walletAddress && telegramHandle) {
+                displayEl.textContent = `${telegramHandle} • ${truncateAddress(walletAddress)}`;
+                displayEl.title = `${telegramHandle} | ${walletAddress}`;
+            } else {
+                displayEl.textContent = 'Not connected';
+                displayEl.title = '';
+            }
+        }
+
+        function formatNumber(num, forceDecimals = false) {
+            const n = Number(num);
+            if (forceDecimals) {
+                return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+            return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+        }
+
+        document.querySelectorAll('.formatted-input').forEach(input => {
+            const moveCursorToEnd = (el) => {
+                setTimeout(() => { el.selectionStart = el.selectionEnd = el.value.length; }, 0);
+            };
+
+            input.addEventListener('input', function () {
+                let value = this.value.replace(/[^0-9.]/g, '');
+                const parts = value.split('.');
+                if (parts.length > 2) value = parts[0] + '.' + parts.slice(1).join('');
+
+                let num = parseFloat(value);
+                if (isNaN(num)) num = 0;
+                if (num > MAX_PER_FIELD) {
+                    num = MAX_PER_FIELD;
+                    this.classList.add('cap-reached');
+                } else {
+                    this.classList.remove('cap-reached');
+                }
+
+                this.dataset.raw = num;
+                this.value = formatNumber(num);
+                moveCursorToEnd(this);
+                updateInRealTime();
+            });
+
+            input.addEventListener('blur', function () {
+                const raw = parseFloat(this.dataset.raw) || 0;
+                this.value = formatNumber(raw, true);
+            });
+
+            input.addEventListener('focus', function () {
+                const raw = parseFloat(this.dataset.raw) || 0;
+                this.value = formatNumber(raw);
+                moveCursorToEnd(this);
+            });
+
+            const saved = localStorage.getItem('allocations');
+            if (saved) {
+                const data = JSON.parse(saved);
+                const token = this.id.replace('-amount', '');
+                if (data[token] !== undefined) {
+                    this.dataset.raw = data[token];
+                    this.value = formatNumber(data[token], true);
+                }
+            }
+        });
+
+        // LOAD SAVED DATA
+        const savedWallet = localStorage.getItem('portfolio_wallet');
+        const savedTelegram = localStorage.getItem('portfolio_telegram');
+
+        if (savedWallet && savedTelegram) {
+            walletAddress = savedWallet;
+            telegramHandle = savedTelegram;
+            updateWalletDisplay();
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('portfolioChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Verse', 'Bitcoin', 'Ethereum', 'Solana', 'Avalanche', 'Available'],
+                    datasets: [{
+                        data: [0, 0, 0, 0, 0, totalBalance],
+                        backgroundColor: Object.values(colors),
+                        borderWidth: 0,
+                        hoverOffset: 20
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: '#e2e8f0', padding: 20, font: { size: 14 } } } }
+                }
+            });
+        }
+
+        function updateInRealTime() {
+            let total = 0;
+            ['verse','btc','eth','sol','avax'].forEach(token => {
+                const input = document.getElementById(`${token}-amount`);
+                const raw = parseFloat(input.dataset.raw) || 0;
+                total += raw;
+
+                const percent = ((raw / totalBalance) * 100).toFixed(1);
+                document.getElementById(`${token}-alloc`).textContent = formatNumber(raw, true);
+                document.getElementById(`${token}-percent`).textContent = percent;
+            });
+
+            const available = totalBalance - total;
+            const isOverAllocated = available < 0;
+
+            document.getElementById('available-balance').textContent = formatNumber(Math.max(0, available), true);
+            document.getElementById('available-text').classList.toggle('over', isOverAllocated);
+            document.getElementById('live-warning').classList.toggle('show', isOverAllocated);
+            allocateBtn.disabled = isOverAllocated;
+
+            chart.data.datasets[0].data = [
+                parseFloat(document.getElementById('verse-amount').dataset.raw) || 0,
+                parseFloat(document.getElementById('btc-amount').dataset.raw) || 0,
+                parseFloat(document.getElementById('eth-amount').dataset.raw) || 0,
+                parseFloat(document.getElementById('sol-amount').dataset.raw) || 0,
+                parseFloat(document.getElementById('avax-amount').dataset.raw) || 0,
+                Math.max(0, available)
+            ];
+            chart.update('none');
+        }
+
+        allocateBtn.addEventListener('click', () => {
+            const msg = document.getElementById('message');
+            msg.style.opacity = 0;
+
+            ['verse','btc','eth','sol','avax'].forEach(token => {
+                allocations[token] = parseFloat(document.getElementById(`${token}-amount`).dataset.raw || 0);
+            });
+            localStorage.setItem('allocations', JSON.stringify(allocations));
+
+            msg.textContent = "Portfolio saved successfully!";
+            msg.style.color = "#00ff88";
+            msg.style.opacity = 1;
+            setTimeout(() => msg.style.opacity = 0, 3000);
+        });
+
+        // MODAL LOGIC
+        const walletModal = document.getElementById('wallet-modal');
+        const telegramInput = document.getElementById('telegram-input');
+        const walletInput = document.getElementById('wallet-input');
+        const submitWallet = document.getElementById('submit-wallet');
+
+        function showModal() { walletModal.style.display = 'flex'; telegramInput.focus(); }
+        function hideModal() { walletModal.style.display = 'none'; }
+
+        submitWallet.addEventListener('click', () => {
+            const tg = telegramInput.value.trim();
+            const poly = walletInput.value.trim();
+
+            if (!tg || !poly) { alert('Please fill both fields'); return; }
+            if (!tg.startsWith('@')) { alert('Telegram must start with @'); return; }
+            if (!poly.startsWith('0x') || poly.length < 30) { alert('Invalid Polygon address'); return; }
+
+            walletAddress = poly;
+            telegramHandle = tg;
+
+            localStorage.setItem('portfolio_wallet', poly);
+            localStorage.setItem('portfolio_telegram', tg);
+
+            hideModal();
+            updateWalletDisplay();
+        });
+
+        // DISCONNECT WALLET — FULL RESET
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            localStorage.removeItem('portfolio_wallet');
+            localStorage.removeItem('portfolio_telegram');
+            localStorage.removeItem('allocations');
+
+            walletAddress = null;
+            telegramHandle = null;
+            allocations = { verse: 0, btc: 0, eth: 0, sol: 0, avax: 0 };
+
+            document.querySelectorAll('.formatted-input').forEach(i => {
+                i.value = '0.00';
+                i.dataset.raw = '0';
+                i.classList.remove('cap-reached');
+            });
+
+            updateWalletDisplay();
+            updateInRealTime();
+            showModal();
+        });
+
+        if (!walletAddress || !telegramHandle) showModal();
+
+        const backToTopBtn = document.getElementById('back-to-top');
+        window.addEventListener('scroll', () => {
+            backToTopBtn.classList.toggle('show', window.scrollY > 500);
+        });
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        initChart();
+        updateInRealTime();
+    </script>
+</body>
+</html>
