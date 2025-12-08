@@ -105,7 +105,7 @@
         <div class="footer-credit">Powered by <a href="https://snappquest.niti.com.ng/" target="_blank">SnappQuest</a></div>
     </div>
 
-    <button id="back-to-top"><i class="fas fa-arrow-up"></i></button>
+    <button id="back-to-top">Up Arrow</button>
 
     <div id="wallet-modal" class="modal">
         <div class="modal-content">
@@ -116,14 +116,13 @@
         </div>
     </div>
 
-    <!-- NEW: FANCY DISCONNECT CONFIRMATION MODAL -->
     <div id="disconnect-modal" class="modal">
         <div class="modal-content">
             <h2>Disconnect Wallet?</h2>
             <p style="margin:20px 0;font-size:1.1rem;color:var(--text-muted)">This will clear all your data and reset the page.</p>
             <div class="modal-buttons">
                 <button class="modal-btn cancel" id="cancel-disconnect">Cancel</button>
-                <button class="modal-btn confirm" id="confirm-disconnect">Yes, Disconnect</button>
+                <button class="modal-btn confirm" id="confirm-disconnect">Yes</button>
             </div>
         </div>
     </div>
@@ -133,7 +132,7 @@
     <script>
         const SHEET_ID = "1S5PAc7N-vz6s_g8d5WnyDfxnD6820XohcsiP5iJUStY";
         const API_KEY  = "AIzaSyDseGK7WIi6hUGD_1Oz8cweDraAQpFisoQ";
-        const SHEET_RANGE = "Form responses 1!B2:H";
+        const SHEET_RANGE = "Form responses 1!A:I";  // Now includes Column I (current value)
         const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScE0i6UIKbJPvdv21pj3FsqsnPrbLX9ItcnbgGnDLVuzAAkag/formResponse";
         const FIELD = {verse:"entry.647719580",btc:"entry.1396080383",eth:"entry.1707728293",sol:"entry.522687597",avax:"entry.1098884549",wallet:"entry.1373418169",tg:"entry.1769653888"};
         const totalBalance = 100000;
@@ -164,15 +163,27 @@
             if(!walletAddress || !telegramHandle) return false;
             const rows = await fetchSheetData();
             for(const row of rows){
-                if(row.length < 7) continue;
-                const [v,b,e,s,a,w,t] = row;
+                if(row.length < 9) continue; // Now includes Column I
+                const [timestamp, v, b, e, s, a, w, t, currentValue] = row;
                 if((w && w.toLowerCase() === walletAddress.toLowerCase()) || (t && t.toLowerCase() === telegramHandle.toLowerCase())){
-                    ['verse','btc','eth','sol','avax'].forEach((tok,i)=>{const inp=document.getElementById(tok+'-amount'); inp.dataset.raw=row[i]||'0'; inp.value=Number(row[i]||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); inp.disabled=true;});
+                    // Load allocations
+                    ['verse','btc','eth','sol','avax'].forEach((tok,i)=>{ 
+                        const inp = document.getElementById(tok+'-amount'); 
+                        const val = row[i+1] || '0';
+                        inp.dataset.raw = val; 
+                        inp.value = Number(val).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); 
+                        inp.disabled = true;
+                    });
                     document.querySelectorAll('.formatted-input').forEach(i=>i.disabled=true);
                     allocateBtn.style.display='none';
                     document.getElementById('message').textContent="You already submitted! Portfolio locked.";
                     document.getElementById('message').style.color="#8b5cf6"; document.getElementById('message').style.opacity=1;
-                    showToast("Welcome back! Your submission is loaded & locked.", "info");
+                    
+                    // UPDATE TOTAL PORTFOLIO VALUE FROM SHEET (COLUMN I)
+                    const liveValue = currentValue ? parseFloat(currentValue.replace(/[^0-9.-]/g,'')) || 100000 : 100000;
+                    document.getElementById('total-balance').textContent = liveValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    
+                    showToast("Welcome back! Your live portfolio value loaded.", "info");
                     updateInRealTime();
                     return true;
                 }
@@ -278,7 +289,6 @@
                 document.getElementById('message').style.color="#00ff88"; document.getElementById('message').style.opacity=1;
             };
 
-            // FANCY DISCONNECT MODAL
             document.getElementById('reset-btn').onclick = () => {
                 document.getElementById('disconnect-modal').style.display = 'flex';
             };
