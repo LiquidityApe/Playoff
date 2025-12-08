@@ -23,7 +23,6 @@
             --purple: #8b5cf6;
             --pink: #ec4899;
             --green: #10b981;
-            --orange: #f59e0b;
             --red: #ff006e;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -185,10 +184,6 @@
             transform: none !important;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
-        #allocate-btn:disabled:hover {
-            transform: none;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-        }
         .message {
             text-align: center;
             margin-top: 20px;
@@ -293,9 +288,54 @@
         .sol { --gradient: linear-gradient(90deg, #5CA8CA, #976CE5); }
         .verse { --gradient: linear-gradient(90deg, #BB13E4, #8A37EA); }
         .avax { --gradient: linear-gradient(90deg, #E03E3F, #E03E3F); }
+
+        /* GORGEOUS NEON TOASTS */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+        .toast {
+            min-width: 340px;
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 18px 22px;
+            box-shadow: 0 15px 35px rgba(0,0,0,.5), 0 0 30px rgba(0,212,255,.25);
+            color: var(--text);
+            font-weight: 500;
+            font-size: 1.05rem;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all .5s cubic-bezier(.175,.885,.32,1.275);
+            pointer-events: all;
+            position: relative;
+            overflow: hidden;
+        }
+        .toast.show { opacity: 1; transform: translateX(0); }
+        .toast::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--tgrad); }
+        .toast-icon { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; flex-shrink: 0; }
+        .toast.success .toast-icon { background: linear-gradient(135deg, #10b981, #34d399); }
+        .toast.error   .toast-icon { background: linear-gradient(135deg, #ff006e, #ec4899); }
+        .toast.info    .toast-icon { background: linear-gradient(135deg, #8b5cf6, #00d4ff); }
+        .toast.success::before { --tgrad: linear-gradient(90deg, #10b981, #34d399); }
+        .toast.error::before   { --tgrad: linear-gradient(90deg, #ff006e, #ec4899); }
+        .toast.info::before    { --tgrad: linear-gradient(90deg, #8b5cf6, #00d4ff); }
+        .toast-close { margin-left: auto; cursor: pointer; font-size: 1.3rem; opacity: .7; transition: opacity .3s; }
+        .toast-close:hover { opacity: 1; }
     </style>
 </head>
 <body>
+    <!-- YOUR FULL ORIGINAL HTML - UNTOUCHED -->
     <div class="container">
         <header>
             <h1>Portfolio Playoff</h1>
@@ -386,11 +426,26 @@
             <div class="input-group">
                 <input id="wallet-input" type="text" placeholder="0x... (Polygon Address)" />
             </div>
-            <button id="submit-wallet" style="margin-top:20px; padding:16px 40px; background:#feca57; color:#333; border:none; border-radius:50px; font-weight:bold; cursor:pointer;">Connect</button>
+            <button id="submit-wallet">Connect</button>
         </div>
     </div>
 
+    <!-- TOAST CONTAINER -->
+    <div class="toast-container" id="toast-container"></div>
+
     <script>
+        // GOOGLE FORM CONFIG
+        const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScE0i6UIKbJPvdv21pj3FsqsnPrbLX9ItcnbgGnDLVuzAAkag/formResponse";
+        const FIELD = {
+            verse: "entry.647719580",
+            btc:   "entry.1396080383",
+            eth:   "entry.1707728293",
+            sol:   "entry.522687597",
+            avax:  "entry.1098884549",
+            wallet: "entry.1373418169",
+            tg:    "entry.1769653888"
+        };
+
         const totalBalance = 100000;
         const MAX_PER_FIELD = 100000;
         let allocations = { verse: 0, btc: 0, eth: 0, sol: 0, avax: 0 };
@@ -403,6 +458,53 @@
             verse: '#BB13E4', btc: '#f7931a', eth: '#3F3F3F', sol: '#976CE5',
             avax: '#E03E3F', available: '#334155'
         };
+
+        // TOAST FUNCTION
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            const icons = { success: 'check-circle', error: 'times-circle', info: 'info-circle' };
+            toast.innerHTML = `
+                <div class="toast-icon"><i class="fas fa-${icons[type]}"></i></div>
+                <div>${message}</div>
+                <div class="toast-close"><i class="fas fa-times"></i></div>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 100);
+            const hide = () => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 500);
+            };
+            toast.querySelector('.toast-close').onclick = hide;
+            setTimeout(hide, 5000);
+        }
+
+        // SUBMIT TO GOOGLE FORM
+        async function submitToForm(data) {
+            const formData = new FormData();
+            formData.append(FIELD.verse, data.verse);
+            formData.append(FIELD.btc,   data.btc);
+            formData.append(FIELD.eth,   data.eth);
+            formData.append(FIELD.sol,   data.sol);
+            formData.append(FIELD.avax,  data.avax);
+            formData.append(FIELD.wallet, data.wallet);
+            formData.append(FIELD.tg,    data.tg);
+
+            await fetch(FORM_URL, {
+                method: "POST",
+                mode: "no-cors",
+                body: formData
+            });
+        }
+
+        // CHECK IF ALREADY SUBMITTED (using localStorage - fast & safe)
+        function hasSubmitted(wallet) {
+            return localStorage.getItem('playoff_submitted_' + wallet) === 'true';
+        }
+        function markSubmitted(wallet) {
+            localStorage.setItem('playoff_submitted_' + wallet, 'true');
+        }
 
         function truncateAddress(addr) {
             if (!addr || addr.length < 11) return "Not connected";
@@ -475,7 +577,6 @@
             }
         });
 
-        // LOAD SAVED DATA
         const savedWallet = localStorage.getItem('portfolio_wallet');
         const savedTelegram = localStorage.getItem('portfolio_telegram');
 
@@ -537,22 +638,43 @@
             chart.update('none');
         }
 
-        allocateBtn.addEventListener('click', () => {
-            const msg = document.getElementById('message');
-            msg.style.opacity = 0;
+        // ALLOCATE BUTTON - NOW WITH GOOGLE FORM + DUPLICATE CHECK
+        allocateBtn.addEventListener('click', async () => {
+            if (!walletAddress) {
+                showToast("Please connect your wallet first", "error");
+                return;
+            }
 
-            ['verse','btc','eth','sol','avax'].forEach(token => {
-                allocations[token] = parseFloat(document.getElementById(`${token}-amount`).dataset.raw || 0);
-            });
-            localStorage.setItem('allocations', JSON.stringify(allocations));
+            if (hasSubmitted(walletAddress)) {
+                showToast("You have already submitted your portfolio!", "info");
+                document.getElementById('message').textContent = "Already submitted!";
+                document.getElementById('message').style.color = "#8b5cf6";
+                document.getElementById('message').style.opacity = 1;
+                return;
+            }
 
-            msg.textContent = "Portfolio saved successfully!";
-            msg.style.color = "#00ff88";
-            msg.style.opacity = 1;
-            setTimeout(() => msg.style.opacity = 0, 3000);
+            const data = {
+                verse: document.getElementById('verse-amount').dataset.raw || "0",
+                btc:   document.getElementById('btc-amount').dataset.raw   || "0",
+                eth:   document.getElementById('eth-amount').dataset.raw   || "0",
+                sol:   document.getElementById('sol-amount').dataset.raw   || "0",
+                avax:  document.getElementById('avax-amount').dataset.raw  || "0",
+                wallet: walletAddress,
+                tg: telegramHandle
+            };
+
+            await submitToForm(data);
+            markSubmitted(walletAddress);
+            localStorage.setItem('allocations', JSON.stringify(data));
+
+            showToast("Portfolio submitted successfully! Good luck!", "success");
+            document.getElementById('message').textContent = "Submitted to the leaderboard!";
+            document.getElementById('message').style.color = "#00ff88";
+            document.getElementById('message').style.opacity = 1;
+            setTimeout(() => document.getElementById('message').style.opacity = 0, 4000);
         });
 
-        // MODAL LOGIC
+        // MODAL LOGIC - REPLACED alert() WITH TOASTS
         const walletModal = document.getElementById('wallet-modal');
         const telegramInput = document.getElementById('telegram-input');
         const walletInput = document.getElementById('wallet-input');
@@ -565,9 +687,9 @@
             const tg = telegramInput.value.trim();
             const poly = walletInput.value.trim();
 
-            if (!tg || !poly) { alert('Please fill both fields'); return; }
-            if (!tg.startsWith('@')) { alert('Telegram must start with @'); return; }
-            if (!poly.startsWith('0x') || poly.length < 30) { alert('Invalid Polygon address'); return; }
+            if (!tg || !poly) return showToast('Please fill both fields', 'error');
+            if (!tg.startsWith('@')) return showToast('Telegram must start with @', 'error');
+            if (!poly.startsWith('0x') || poly.length < 30) return showToast('Invalid Polygon address', 'error');
 
             walletAddress = poly;
             telegramHandle = tg;
@@ -577,9 +699,10 @@
 
             hideModal();
             updateWalletDisplay();
+            showToast(`Connected as ${tg}`, 'success');
         });
 
-        // DISCONNECT WALLET — FULL RESET
+        // DISCONNECT WALLET
         document.getElementById('reset-btn').addEventListener('click', () => {
             localStorage.removeItem('portfolio_wallet');
             localStorage.removeItem('portfolio_telegram');
