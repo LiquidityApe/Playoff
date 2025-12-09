@@ -257,19 +257,24 @@
 
     <script>
         const SHEET_ID = "1S5PAc7N-vz6s_g8d5WnyDfxnD6820XohcsiP5iJUStY";
-        const API_KEY = "AIzaSyDseGK7WIi6hUGD_1Oz8cweDraAQpFisoQ";
-        const USER_RANGE = "Form responses 1!B2:I";
-        const PRICE_RANGE = "Form responses 1!M2:N6";
-
+        const API_KEY  = "AIzaSyDseGK7WIi6hUGD_1Oz8cweDraAQpFisoQ";
+    
+        // Pull from row 2 to column AA → includes G (Telegram), H (Wallet), I (Value), S/U/W/Y/AA (tokens)
+        const DATA_RANGE = "Form responses 1!A2:AA";
+    
         function formatNumber(n) {
+            n = Number(n || 0);
             if (n >= 1e9) return (n / 1e9).toFixed(2).replace(/\.00$/, '') + 'B';
             if (n >= 1e6) return (n / 1e6).toFixed(2).replace(/\.00$/, '') + 'M';
             if (n >= 1e3) return (n / 1e3).toFixed(2).replace(/\.00$/, '') + 'K';
-            return n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}).replace(/\.00$/, '');
+            return n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         }
-
-        function truncateAddress(a) { return !a || a.length < 11 ? a : `${a.slice(0,6)}...${a.slice(-4)}`; }
-
+    
+        function truncateAddress(a) {
+            return !a || a.length < 11 ? a : `${a.slice(0,6)}...${a.slice(-4)}`;
+        }
+    
+        // Login & modal logic stays exactly the same
         document.getElementById('login-btn').onclick = () => {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value;
@@ -282,98 +287,111 @@
                 document.getElementById('access-denied-modal').style.display = 'flex';
             }
         };
-
+    
         document.getElementById('close-denied').onclick = () => {
             document.getElementById('access-denied-modal').style.display = 'none';
         };
-
+    
         document.getElementById('access-denied-modal').onclick = (e) => {
             if (e.target === document.getElementById('access-denied-modal')) {
                 document.getElementById('access-denied-modal').style.display = 'none';
             }
         };
-
+    
         document.getElementById('logout-btn').onclick = () => {
             document.getElementById('dashboard').style.display = 'none';
             document.getElementById('login-screen').style.display = 'flex';
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
         };
-
+    
         async function loadDashboard() {
             try {
-                const [users, prices] = await Promise.all([
-                    fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${USER_RANGE}?key=${API_KEY}`).then(r => r.json()).then(d => d.values || []),
-                    fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${PRICE_RANGE}?key=${API_KEY}`).then(r => r.json()).then(d => d.values || [])
-                ]);
-
-                if (!users.length) {
+                const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${DATA_RANGE}?key=${API_KEY}`);
+                const data = await res.json();
+                const rows = data.values || [];
+    
+                if (rows.length === 0) {
                     document.getElementById('loader').textContent = "No submissions yet.";
                     return;
                 }
-
-                const oldPrices = prices.map(row => parseFloat(row[0]) || 1);
-                const currentPrices = prices.map(row => parseFloat(row[1]) || 1);
+    
                 const assets = ['Verse', 'Bitcoin', 'Ethereum', 'Solana', 'Avalanche'];
-
-                const userData = users.map(row => {
-                    const allocations = row.slice(0,5).map(v => parseFloat(v) || 0);
-                    const wallet = row[5] || '';
-                    const tg = row[6] || '';
-                    const totalValue = parseFloat(row[7]) || allocations.reduce((sum, a, i) => sum + (a / oldPrices[i]) * currentPrices[i], 0);
-                    const tokens = allocations.map((a, i) => a / oldPrices[i]);
-                    return { tg, wallet, totalValue, tokens };
-                }).filter(u => u.totalValue > 0).sort((a,b) => b.totalValue - a.totalValue);
-
-                const totalSubmissions = userData.length;
-                const totalTokens = assets.map((_, i) => userData.reduce((s, u) => s + u.tokens[i], 0));
-
+                // Column indexes (0-indexed): G=6, H=7, I=8, S=18, U=20, W=22, Y=24, AA=26
+                const tokenCols = [18, 20, 22, 24, 26];
+    
+                const userData = rows.map(row => ({
+                    tg:        row[7] || '—',           // Telegram (G)
+                    wallet:    row[6] || '—',           // Wallet (H)
+                    totalValue: parseFloat(row[8]) || 100000, // Current portfolio value (I)
+                    tokens:    tokenCols.map(i => parseFloat(row[i]) || 0) // S, U, W, Y, AA
+                }))
+                .filter(u => u.totalValue > 0)
+                .sort((a, b) => b.totalValue - a.totalValue);
+    
+                const totalPlayers = userData.length;
+                const totalTokens = tokenCols.map(colIdx =>
+                    rows.reduce((sum, r) => sum + (parseFloat(r[colIdx]) || 0), 0)
+                );
+    
                 document.getElementById('loader').style.display = 'none';
-
+    
+                // Stats Cards
                 const stats = document.getElementById('stats-grid');
-                stats.innerHTML = `<div class="stat-card"><div class="stat-title">Total Players</div><div class="stat-value">${totalSubmissions}</div></div>`;
-                assets.forEach((a, i) => {
-                    stats.innerHTML += `<div class="stat-card"><div class="stat-title">Total ${a} Tokens</div><div class="stat-value">${formatNumber(totalTokens[i])}</div></div>`;
+                stats.innerHTML = `<div class="stat-card"><div class="stat-title">Total Players</div><div class="stat-value">${totalPlayers}</div></div>`;
+                assets.forEach((name, i) => {
+                    stats.innerHTML += `<div class="stat-card"><div class="stat-title">Total ${name} Tokens</div><div class="stat-value">${formatNumber(totalTokens[i])}</div></div>`;
                 });
-
+    
+                // Chart
                 new Chart(document.getElementById('tokensChart'), {
                     type: 'bar',
-                    data: { labels: assets, datasets: [{ label: 'Total Tokens', data: totalTokens,
-                        backgroundColor: ['#BB13E4', '#f7931a', '#3F3F3F', '#976CE5', '#E03E3F'] }] },
+                    data: {
+                        labels: assets,
+                        datasets: [{
+                            label: 'Total Tokens Owned',
+                            data: totalTokens,
+                            backgroundColor: ['#BB13E4', '#f7931a', '#3F3F3F', '#976CE5', '#E03E3F']
+                        }]
+                    },
                     options: { responsive: true, scales: { y: { beginAtZero: true } } }
                 });
-
+    
+                // Ranking Table
                 const tbody = document.querySelector('#ranking-table tbody');
                 tbody.innerHTML = '';
                 userData.forEach((u, i) => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
                         <td class="rank">#${i+1}</td>
                         <td>${u.tg}</td>
                         <td>${truncateAddress(u.wallet)}</td>
-                        <td class="value">$${u.totalValue.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                        <td class="value">$${u.totalValue.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
                         ${u.tokens.map(t => `<td>${formatNumber(t)}</td>`).join('')}
                     `;
-                    tbody.appendChild(row);
+                    tbody.appendChild(tr);
                 });
-
+    
+                // Export to CSV
                 document.getElementById('export-btn').onclick = () => {
                     let csv = "Rank,Telegram,Wallet,Total Value USD,Verse Tokens,BTC Tokens,ETH Tokens,SOL Tokens,AVAX Tokens\n";
                     userData.forEach((u, i) => {
-                        csv += `${i+1},${u.tg},${u.wallet},${u.totalValue},${u.tokens.map(t=>t.toFixed(6)).join(',')}\n`;
+                        csv += `${i+1},${u.tg},${u.wallet},${u.totalValue.toFixed(2)},${u.tokens.map(t => t.toFixed(6)).join(',')}\n`;
                     });
                     const blob = new Blob([csv], { type: 'text/csv' });
                     const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a'); a.href = url; a.download = 'Portfolio_Playoff_Leaderboard.csv';
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'Portfolio_Playoff_Leaderboard.csv';
                     a.click();
                 };
-
-            } catch (e) {
+    
+            } catch (err) {
                 document.getElementById('loader').textContent = "Error loading data.";
-                console.error(e);
+                console.error(err);
             }
         }
-
+    
         // Back to top
         window.addEventListener('scroll', () => {
             document.getElementById('back-to-top').classList.toggle('show', window.scrollY > 500);
