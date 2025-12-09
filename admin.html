@@ -259,7 +259,6 @@
         const SHEET_ID = "1S5PAc7N-vz6s_g8d5WnyDfxnD6820XohcsiP5iJUStY";
         const API_KEY  = "AIzaSyDseGK7WIi6hUGD_1Oz8cweDraAQpFisoQ";
     
-        // Pull from row 2 to column AA → includes G (Telegram), H (Wallet), I (Value), S/U/W/Y/AA (tokens)
         const DATA_RANGE = "Form responses 1!A2:AA";
     
         function formatNumber(n) {
@@ -274,7 +273,7 @@
             return !a || a.length < 11 ? a : `${a.slice(0,6)}...${a.slice(-4)}`;
         }
     
-        // Login & modal logic stays exactly the same
+        // Login logic unchanged
         document.getElementById('login-btn').onclick = () => {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value;
@@ -317,16 +316,22 @@
                 }
     
                 const assets = ['Verse', 'Bitcoin', 'Ethereum', 'Solana', 'Avalanche'];
-                // Column indexes (0-indexed): G=6, H=7, I=8, S=18, U=20, W=22, Y=24, AA=26
-                const tokenCols = [18, 20, 22, 24, 26];
+                const tokenCols = [18, 20, 22, 24, 26]; // S, U, W, Y, AA
     
-                const userData = rows.map(row => ({
-                    tg:        row[7] || '—',           // Telegram (G)
-                    wallet:    row[6] || '—',           // Wallet (H)
-                    totalValue: parseFloat(row[8]) || 100000, // Current portfolio value (I)
-                    tokens:    tokenCols.map(i => parseFloat(row[i]) || 0) // S, U, W, Y, AA
-                }))
-                .filter(u => u.totalValue > 0)
+                const userData = rows.map(row => {
+                    const rawValue = row[8]; // Column I
+                    const totalValue = rawValue !== undefined && rawValue !== "" 
+                        ? parseFloat(rawValue) || 0 
+                        : 100000; // Only default to 100K if cell is truly empty
+    
+                    return {
+                        tg:        row[7] || '—',           // Telegram (G)
+                        wallet:    row[6] || '—',           // Wallet (H)
+                        totalValue: totalValue,
+                        tokens:    tokenCols.map(i => parseFloat(row[i]) || 0)
+                    };
+                })
+                .filter(u => u.totalValue > 0)  // Now removes $0 users properly
                 .sort((a, b) => b.totalValue - a.totalValue);
     
                 const totalPlayers = userData.length;
@@ -372,7 +377,7 @@
                     tbody.appendChild(tr);
                 });
     
-                // Export to CSV
+                // Export CSV
                 document.getElementById('export-btn').onclick = () => {
                     let csv = "Rank,Telegram,Wallet,Total Value USD,Verse Tokens,BTC Tokens,ETH Tokens,SOL Tokens,AVAX Tokens\n";
                     userData.forEach((u, i) => {
@@ -392,11 +397,11 @@
             }
         }
     
-        // Back to top
         window.addEventListener('scroll', () => {
             document.getElementById('back-to-top').classList.toggle('show', window.scrollY > 500);
         });
         document.getElementById('back-to-top').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
     </script>
+
 </body>
 </html>
